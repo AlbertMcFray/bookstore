@@ -1,0 +1,19 @@
+server:
+  port: 8080
+spring:
+  application:
+    name: Lab2
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/bookstoredb
+    username: postgres
+    password: root
+  flyway:
+    schemas:
+      - public
+      - bookstore
+    enabled: true
+    baseline-on-migrate: true
+    url: jdbc:postgresql://localhost:5432/bookstoredb
+    user: postgres
+    password: root
+    locations: classpath:db/migration
