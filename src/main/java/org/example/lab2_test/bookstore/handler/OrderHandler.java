@@ -1,8 +1,11 @@
 package org.example.lab2_test.bookstore.handler;
 
+import lombok.RequiredArgsConstructor;
 import org.example.lab2_test.bookstore.entity.Book;
-import org.example.lab2_test.bookstore.entity.Client;
 import org.example.lab2_test.bookstore.entity.Order;
+import org.example.lab2_test.bookstore.repository.BookRepository;
+import org.example.lab2_test.bookstore.repository.OrderRepository;
+import org.example.lab2_test.bookstore.repository.UserRepository;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
@@ -11,28 +14,17 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Random;
 
 @Component
+@RequiredArgsConstructor
 public class OrderHandler {
 
-    private final List<Book> books = List.of(
-            new Book(1L, "Spring in Action", "Craig Walls", 45.0),
-            new Book(2L, "Java Concurrency in Practice", "Brian Goetz", 55.0),
-            new Book(3L, "Effective Java", "Joshua Bloch", 50.0)
-    );
-
-    private final List<Client> clients = List.of(
-            new Client(1L, "Roman", "Chernukha", 21),
-            new Client(2L, "Ivanna", "Likh", 21),
-            new Client(3L, "Ivan", "Tkach", 19)
-    );
-
-    private final Random random = new Random();
+    private final BookRepository bookRepository;
+    private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     public Mono<ServerResponse> getBookList(ServerRequest request) {
-        Flux<Book> booksFlux = Flux.fromIterable(books);
+        Flux<Book> booksFlux = bookRepository.findAll();
 
         return ServerResponse
                 .ok()
@@ -41,19 +33,25 @@ public class OrderHandler {
     }
 
     public Mono<ServerResponse> placeOrder(ServerRequest request) {
-        Mono<Order> orderMono = request.bodyToMono(Order.class)
-                .map(order -> {
-                    Book randomBook = books.get(random.nextInt(books.size()));
-                    Client randomClient = clients.get(random.nextInt(clients.size()));
-
-                    order.setBookId(randomBook.getId());
-                    order.setClientName(randomClient.getFirstName() + " " + randomClient.getLastName());
-                    order.setOrderDate(LocalDateTime.now());
-                    return order;
-                });
-        return ServerResponse
-                .ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(orderMono, Order.class);
+        return request.bodyToMono(Order.class)
+                .flatMap(order ->
+                        userRepository.findById(order.getUserId())
+                                .switchIfEmpty(Mono.error(new RuntimeException("User not found")))
+                                .flatMap(user ->
+                                        bookRepository.findById(order.getBookId())
+                                                .switchIfEmpty(Mono.error(new RuntimeException("Book not found")))
+                                                .flatMap(book -> {
+                                                    order.setOrderDate(LocalDateTime.now());
+                                                    return orderRepository.save(order);
+                                                })
+                                )
+                )
+                .flatMap(savedOrder -> ServerResponse
+                        .ok()
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .bodyValue(savedOrder))
+                .onErrorResume(e -> ServerResponse
+                        .badRequest()
+                        .bodyValue(e.getMessage()));
     }
 }

@@ -26,8 +26,8 @@ public class OrderService {
         return orderRepository.findById(id)
                 .flatMap(existingOrder -> {
                     existingOrder.setBookId(order.getBookId());
-                    existingOrder.setClientId(order.getClientId());
-                    existingOrder.setClientName(order.getClientName());
+                    existingOrder.setUserId(order.getUserId());
+                    existingOrder.setUserUsername(order.getUserUsername());
                     existingOrder.setOrderDate(order.getOrderDate());
                     return orderRepository.save(existingOrder);
                 });

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class Order {
     private Long orderId;
     private Long bookId;
-    private Long clientId;
-    private String clientName;
+    private Long userId;
+    private String userUsername;
     private LocalDateTime orderDate;
 }

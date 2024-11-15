@@ -1,0 +1,8 @@
+ALTER TABLE client RENAME TO "user";
+
+ALTER TABLE "user"
+    ADD COLUMN username VARCHAR(100) NOT NULL,
+    ADD COLUMN password VARCHAR(100) NOT NULL;
+
+ALTER TABLE "user"
+DROP COLUMN age;
